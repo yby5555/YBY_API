@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MongoDB 数据导出工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .form-container {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-row-full {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 0.95rem;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #4facfe;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            margin-right: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4facfe;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .form-container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>MongoDB 数据导出工具</h1>
+            <p>轻松导出您的 MongoDB 数据为 Excel、JSON 或 CSV 格式</p>
+        </div>
+
+        <div class="form-container">
+            <div id="alert-container"></div>
+
+            <form id="exportForm">
+                <div class="form-group" style="display: none;">
+                    <label for="mongoUri">MongoDB 连接字符串 *</label>
+                    <input type="text" id="mongoUri" name="mongoUri" 
+                           value="mongodb://47.115.130.33:8017" 
+                           placeholder="mongodb://47.115.130.33:8017" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="database">数据库 *</label>
+                        <select id="database" name="database" required>
+                            <option value="">请先连接 MongoDB</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="collection">集合 *</label>
+                        <select id="collection" name="collection" required>
+                            <option value="">请先选择数据库</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="queryConditions">查询条件 (JSON格式，可选)</label>
+                    <textarea id="queryConditions" name="queryConditions" rows="3" 
+                              placeholder='例如: {"status": "active", "age": {"$gte": 18}}'></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>导出字段 (默认全部字段)</label>
+                    <div id="fieldsContainer" class="checkbox-group">
+                        <p>请先选择集合</p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="limit">导出数量限制 (可选)</label>
+                        <input type="number" id="limit" name="limit" 
+                               placeholder="留空表示导出全部数据" min="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="exportFormat">导出格式 *</label>
+                        <select id="exportFormat" name="exportFormat" required>
+                            <option value="excel">Excel (.xlsx)</option>
+                            <option value="json">JSON (.json)</option>
+                            <option value="csv">CSV (.csv)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn btn-secondary" onclick="connectMongoDB()" id="connectBtn">连接数据库</button>
+                    <button type="submit" class="btn btn-primary">导出数据</button>
+                </div>
+            </form>
+
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>正在处理，请稍候...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFields = [];
+
+        function showAlert(message, type = 'error') {
+            const container = document.getElementById('alert-container');
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        function showLoading(show = true) {
+            const loading = document.getElementById('loading');
+            if (show) {
+                loading.classList.add('show');
+            } else {
+                loading.classList.remove('show');
+            }
+        }
+
+        async function connectMongoDB() {
+            const mongoUri = document.getElementById('mongoUri').value;
+            if (!mongoUri) {
+                showAlert('请输入 MongoDB 连接字符串');
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const response = await fetch('/data_export/api/databases/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ mongo_uri: mongoUri })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    populateDatabases(data.databases);
+                    showAlert('连接成功！', 'success');
+                } else {
+                    showAlert(data.error || '连接失败');
+                }
+            } catch (error) {
+                showAlert('连接失败: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function populateDatabases(databases) {
+            const select = document.getElementById('database');
+            select.innerHTML = '<option value="">请选择数据库</option>';
+            databases.forEach(db => {
+                select.innerHTML += `<option value="${db}">${db}</option>`;
+            });
+        }
+
+        async function loadCollections() {
+            const mongoUri = document.getElementById('mongoUri').value;
+            const dbName = document.getElementById('database').value;
+            
+            if (!mongoUri || !dbName) return;
+
+            showLoading(true);
+            try {
+                const response = await fetch('/data_export/api/collections/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ mongo_uri: mongoUri, db_name: dbName })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    populateCollections(data.collections);
+                } else {
+                    showAlert(data.error || '获取集合失败');
+                }
+            } catch (error) {
+                showAlert('获取集合失败: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function populateCollections(collections) {
+            const select = document.getElementById('collection');
+            select.innerHTML = '<option value="">请选择集合</option>';
+            collections.forEach(collection => {
+                select.innerHTML += `<option value="${collection}">${collection}</option>`;
+            });
+        }
+
+        async function loadFields() {
+            const mongoUri = document.getElementById('mongoUri').value;
+            const dbName = document.getElementById('database').value;
+            const collectionName = document.getElementById('collection').value;
+            
+            if (!mongoUri || !dbName || !collectionName) return;
+
+            showLoading(true);
+            try {
+                const response = await fetch('/data_export/api/fields/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        mongo_uri: mongoUri, 
+                        db_name: dbName, 
+                        collection_name: collectionName 
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    currentFields = data.fields;
+                    populateFields(data.fields);
+                } else {
+                    showAlert(data.error || '获取字段失败');
+                }
+            } catch (error) {
+                showAlert('获取字段失败: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function populateFields(fields) {
+            const container = document.getElementById('fieldsContainer');
+            if (fields.length === 0) {
+                container.innerHTML = '<p>未找到字段</p>';
+                return;
+            }
+
+            let html = '<div class="checkbox-item"><input type="checkbox" id="selectAll" onchange="toggleAllFields(this)"><label for="selectAll">全选/取消全选</label></div>';
+            fields.forEach(field => {
+                html += `
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="field_${field.name}" value="${field.name}" checked>
+                        <label for="field_${field.name}">${field.name} (${field.type})</label>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function toggleAllFields(checkbox) {
+            const fieldCheckboxes = document.querySelectorAll('#fieldsContainer input[type="checkbox"]:not(#selectAll)');
+            fieldCheckboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+        }
+
+        // 页面加载完成后提示用户连接
+        document.addEventListener('DOMContentLoaded', function() {
+            showAlert('请点击"连接数据库"按钮开始使用', 'info');
+        });
+
+        // 事件监听器
+        document.getElementById('database').addEventListener('change', loadCollections);
+        document.getElementById('collection').addEventListener('change', loadFields);
+
+        document.getElementById('exportForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                mongo_uri: document.getElementById('mongoUri').value,
+                db_name: document.getElementById('database').value,
+                collection_name: document.getElementById('collection').value,
+                query_conditions: document.getElementById('queryConditions').value,
+                limit: document.getElementById('limit').value,
+                export_format: document.getElementById('exportFormat').value,
+                selected_fields: []
+            };
+
+            // 获取选中的字段
+            const selectedFields = document.querySelectorAll('#fieldsContainer input[type="checkbox"]:checked:not(#selectAll)');
+            selectedFields.forEach(checkbox => {
+                formData.selected_fields.push(checkbox.value);
+            });
+
+            if (!formData.mongo_uri || !formData.db_name || !formData.collection_name) {
+                showAlert('请填写必填项');
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const response = await fetch('/data_export/api/export/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    // 下载文件
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    
+                    // 从响应头获取文件名
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = 'export';
+                    if (contentDisposition) {
+                        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                        if (filenameMatch) {
+                            filename = filenameMatch[1];
+                        }
+                    }
+                    
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showAlert('导出成功！', 'success');
+                } else {
+                    const errorData = await response.json();
+                    showAlert(errorData.error || '导出失败');
+                }
+            } catch (error) {
+                showAlert('导出失败: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+    </script>
+</body>
+</html>

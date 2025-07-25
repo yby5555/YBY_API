@@ -1,0 +1,7 @@
+Django>=4.2.0
+ddddocr>=1.4.11
+django-cors-headers
+gunicorn
+pymongo>=4.0.0
+pandas>=1.5.0
+openpyxl>=3.0.0
