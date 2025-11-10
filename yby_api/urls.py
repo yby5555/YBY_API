@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.http import JsonResponse
+from django.views.static import serve
 
 def handler404(request, exception):
     return JsonResponse({
@@ -18,6 +19,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('ocr_api.urls')),
     path('data_export/', include('data_export.urls')),
+    path('index.html', serve, {'document_root': 'd:/YBY_API/docs', 'path': 'index.html'}),
 ]
 
 # 自定义错误处理
