@@ -464,3 +464,5 @@ def main():
 if __name__ == '__main__':
     from datetime import datetime
     main()
+
+# 在docs 运行py generate_field_docs.py --scan
