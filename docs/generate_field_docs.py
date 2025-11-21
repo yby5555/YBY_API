@@ -9,6 +9,10 @@ col_name ={
     'MedicineItem':'药品表',
     'TreatmentItem':'治疗表',
     'VaccineItem':'疫苗表',
+    'AgriculturalAnalysisReportItem':'农业分析报告表',
+    'AgriculturalIndexItem':'农业指数表',
+    'AgriculturalProductItem':'农产品表',
+    'AgriculturalProductQuotationItem':'农产品报价信息表'
 }
 
 
